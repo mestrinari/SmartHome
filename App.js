@@ -33,13 +33,20 @@ export default function App() {
   };
   const toggleMotor = () => {
     if (isConnected) {
-      if (umi >= 800) {
+      if (isMotorOn) {
+        setIsMotorOn(false);
+        console.log('Desligando o motor');
+      } else if (umi > 950) {
         setIsMotorOn(true);
-      } else {
-        setIsMotorOn(!isMotorOn);
+        console.log('Ligando o motor');
+      } else if (umi < 450 && !isMotorOn) {
+        setIsMotorOn(true);
+        console.log('Ligando o motor');
       }
     }
   };
+  
+  
   
   useEffect(() => {
     if (isConnected) {
@@ -67,10 +74,16 @@ export default function App() {
         setIsConnected(true);
         console.log('Dados recuperados com sucesso');
   
-        if (umidade > 800) {
-          setIsMotorOn(true);
-        } else {
-          setIsMotorOn(false);
+        if (umidade > 950) {
+          if (!isMotorOn) {
+            setIsMotorOn(true);
+            console.log('Ligando o motor');
+          }
+        } else if (umidade < 450) {
+          if (isMotorOn) {
+            setIsMotorOn(false);
+            console.log('Desligando o motor');
+          }
         }
       })
       .catch((error) => {
