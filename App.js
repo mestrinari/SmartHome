@@ -1,19 +1,30 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Switch, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import { MaterialIcons } from '@expo/vector-icons';
 
+const serverIP = 'http://192.168.1.100';
+
 export default function App() {
+  const autoRefreshInterval = useRef(null);
   const [isEnable, setIsEnable] = useState(true);
   const [isMotorOn, setIsMotorOn] = useState(true);
   const [umi, setUmi] = useState(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [manualMotorOn, setManualMotorOn] = useState(false);
 
-  const serverIP = 'http://192.168.1.102';
+  const startAutoRefresh = () => {
+    autoRefreshInterval.current = setInterval(() => {
+      fetchUmidade();
+    }, 6000);
+  };
 
   useEffect(() => {
-    fetchUmidade();
+    startAutoRefresh();
+    return () => {
+      clearInterval(autoRefreshInterval.current);
+    };
   }, []);
 
   const isSwitch = (value) => {
@@ -31,28 +42,27 @@ export default function App() {
         });
     }
   };
+
   const toggleMotor = () => {
     if (isConnected) {
-      if (isMotorOn) {
+      if (isMotorOn || manualMotorOn) {
         setIsMotorOn(false);
+        setManualMotorOn(false);
         console.log('Desligando o motor');
-      } else if (umi > 950) {
+      } else {
         setIsMotorOn(true);
-        console.log('Ligando o motor');
-      } else if (umi < 450 && !isMotorOn) {
-        setIsMotorOn(true);
+        setManualMotorOn(true);
         console.log('Ligando o motor');
       }
     }
   };
-  
-  
-  
+
   useEffect(() => {
     if (isConnected) {
-      const motorState = isMotorOn ? 'on' : 'off';
+      const motorState = isMotorOn || manualMotorOn ? 'on' : 'off';
+      const motorEndpoint = manualMotorOn ? `${serverIP}/${motorState}led1` : `${serverIP}/${motorState}led2`;
       axios
-        .get(`${serverIP}/${motorState}led1`)
+        .get(motorEndpoint)
         .then((response) => {
           console.log(`Motor ${motorState}`);
         })
@@ -60,10 +70,8 @@ export default function App() {
           console.log('Erro ao controlar o motor:', error);
         });
     }
-  }, [isMotorOn]);
-  
-  
-  
+  }, [isMotorOn, manualMotorOn]);
+
   const fetchUmidade = () => {
     axios
       .get(`${serverIP}/umidade`)
@@ -73,7 +81,7 @@ export default function App() {
         setUmi(umidade);
         setIsConnected(true);
         console.log('Dados recuperados com sucesso');
-  
+
         if (umidade > 950) {
           if (!isMotorOn) {
             setIsMotorOn(true);
@@ -91,25 +99,11 @@ export default function App() {
         setIsConnected(false);
       });
   };
-  
-
-  const startAutoRefresh = () => {
-    setInterval(() => {
-      fetchUmidade();
-    }, 6000);
-  };
-
-  useEffect(() => {
-    startAutoRefresh();
-    return () => {
-      clearInterval(startAutoRefresh);
-    };
-  }, []);
 
   let containerStyle = styles.containerGreen;
   if (umi > 800) {
     containerStyle = styles.containerRed;
-  } else if (umi > 200) {
+  } else if (umi > 400) {
     containerStyle = styles.containerYellow;
   }
 
@@ -126,14 +120,16 @@ export default function App() {
         <Text style={styles.switchLabel}>Motor</Text>
         <Switch
           trackColor={{ false: 'red', true: 'green' }}
-          thumbColor={isMotorOn ? 'white' : 'white'}
+          thumbColor={isMotorOn || manualMotorOn ? 'white' : 'white'}
           onValueChange={toggleMotor}
-          value={isMotorOn}
+          value={isMotorOn || manualMotorOn}
         />
       </View>
 
       {!isConnected && (
-        <Text style={styles.connectionErrorText}>Erro de conexão. Verifique sua conexão com o servidor.</Text>
+        <Text style={styles.connectionErrorText}>
+          Erro de conexão. Verifique sua conexão com o servidor.
+        </Text>
       )}
 
       <View>
