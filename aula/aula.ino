@@ -6,7 +6,6 @@
 #define umid A0
 
 int LEDred = 5;   // D1
-int umidade = A0;
 int motor = 2;
 
 const char* ssid = "CIDYCORP";
@@ -24,7 +23,7 @@ void setup() {
   digitalWrite(LEDred, LOW);
 
   pinMode(motor, OUTPUT);
-  digitalWrite(motor, LOW);
+  digitalWrite(motor, HIGH); // Desligar o motor inicialmente
 
   pinMode(umid, INPUT);
 
@@ -54,17 +53,17 @@ void setup() {
     delay(1000);
   });
 
-server.on("/onled1", []() {
-  server.send(200, "text/plain", "Motor ligado");
-  digitalWrite(motor, LOW);  // Inverte a lógica aqui
-  isMotorOn = true; // Atualiza o status do motor
-});
+  server.on("/onled1", []() {
+    server.send(200, "text/plain", "Motor ligado");
+    digitalWrite(motor, LOW);
+    isMotorOn = true; // Atualiza o status do motor
+  });
 
-server.on("/offled1", []() {
-  server.send(200, "text/plain", "Motor desligado");
-  digitalWrite(motor, HIGH); // Inverte a lógica aqui
-  isMotorOn = false; // Atualiza o status do motor
-});
+  server.on("/offled1", []() {
+    server.send(200, "text/plain", "Motor desligado");
+    digitalWrite(motor, HIGH);
+    isMotorOn = false; // Atualiza o status do motor
+  });
 
   server.on("/umidade", []() {
     int valorUmidade = analogRead(umid);
@@ -72,35 +71,6 @@ server.on("/offled1", []() {
     server.send(200, "text/plain", response);
     delay(1000);
   });
-server.on("/api/devices", HTTP_POST, []() {
-  if (server.hasArg("plain")) {
-    String json = server.arg("plain");
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, json);
-
-    if (error) {
-      server.send(400, "text/plain", "Erro ao processar o JSON");
-    } else {
-      bool motorStatus = doc["motorStatus"];
-      int umidade = doc["umidade"];
-
-      // Realize as ações com os dados recebidos
-      if (motorStatus) {
-        digitalWrite(motor, LOW); // Ligar o motor
-        isMotorOn = true;
-      } else {
-        digitalWrite(motor, HIGH); // Desligar o motor
-        isMotorOn = false;
-      }
-
-      server.send(200, "text/plain", "JSON recebido com sucesso");
-    }
-  } else {
-    server.send(400, "text/plain", "Nenhum JSON encontrado");
-  }
-});
-
-  
 
   server.begin();
   Serial.println("Webserver inicializado");
@@ -108,7 +78,6 @@ server.on("/api/devices", HTTP_POST, []() {
   Serial.println("Acesse o endereço pelo: ");
   Serial.println(WiFi.localIP());
 }
-
 
 void loop() {
   server.handleClient();

@@ -19,14 +19,11 @@
   "devDependencies": {
     "@babel/core": "^7.20.0"
   },
-  "engines": {
-    "node": "14.x"
-  },
   "private": true,
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": ""
-},
+}
 
 

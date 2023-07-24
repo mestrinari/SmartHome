@@ -44,18 +44,24 @@ export default function App() {
   };
 
   const toggleMotor = () => {
-    if (isConnected) {
-      if (isMotorOn || manualMotorOn) {
-        setIsMotorOn(false);
-        setManualMotorOn(false);
-        console.log('Desligando o motor');
-      } else {
-        setIsMotorOn(true);
-        setManualMotorOn(true);
-        console.log('Ligando o motor');
-      }
-    }
+    const newMotorState = !isMotorOn;
+    setIsMotorOn(newMotorState);
+    setManualMotorOn(newMotorState);
+    console.log(newMotorState ? 'Ligando o motor' : 'Desligando o motor');
+
+    const motorState = newMotorState ? 'on' : 'off';
+    const motorEndpoint = `${serverIP}/${motorState}led1`;
+    axios
+      .get(motorEndpoint)
+      .then((response) => {
+        console.log(`Motor ${motorState}`);
+      })
+      .catch((error) => {
+        console.log('Erro ao controlar o motor:', error);
+        setIsMotorOn(!newMotorState); // Reverter o estado em caso de falha
+      });
   };
+
 
   useEffect(() => {
     if (isConnected) {
